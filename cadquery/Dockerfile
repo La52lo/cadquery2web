@@ -2,7 +2,7 @@
 # @brief Dockerfile for cadquery container
 # @author 30hours
 
-FROM ubuntu:24.10
+FROM ubuntu:22.04
 WORKDIR /app
 # prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive

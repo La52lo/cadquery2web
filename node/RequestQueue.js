@@ -1,11 +1,6 @@
-/// @file RequestQueue.js
-/// @brief Implements a queue with unique identifiers
-/// @author 30hours
-
 const axios = require('axios');
 
 class RequestQueue {
-
   constructor() {
     this.queue = [];
     this.isProcessing = false;
@@ -14,10 +9,8 @@ class RequestQueue {
   }
 
   async addRequest(endpoint, code) {
-    // date and random string
-    const request_id = Date.now() + '-' + 
+    const request_id = Date.now() + '-' +
       Math.random().toString(36).substring(2, 11);
-    // create a promise for when request is processed
     const requestPromise = new Promise((resolve, reject) => {
       this.requestMap.set(request_id, { resolve, reject });
     });
@@ -27,40 +20,42 @@ class RequestQueue {
   }
 
   async processQueue() {
-    // queue management first
     if (this.isProcessing || this.queue.length === 0) return;
     this.isProcessing = true;
     const { request_id, endpoint, code } = this.queue.shift();
     try {
       console.log(`Processing request ${request_id} with endpoint ${endpoint}`);
-      // call CadQuery server with appropriate response type
       const response = await axios.post('http://cadquery:5000/' + endpoint, {
-          code: code
+        code: code
       }, {
-          responseType: (endpoint === 'stl' || endpoint === 'step') ? 'arraybuffer' : 'json'
+        responseType: (endpoint === 'stl' || endpoint === 'step') ? 'arraybuffer' : 'json',
+        timeout: 120000 // allow CadQuery some time for complex models
       });
-      // resolve the promise for this specific request
       const resolver = this.requestMap.get(request_id);
       if (resolver) {
-          resolver.resolve(response.data);
-          this.requestMap.delete(request_id);
+        // Resolve with the full axios response object so caller can forward headers/binary
+        resolver.resolve(response);
+        this.requestMap.delete(request_id);
       }
     } catch (error) {
-        // log the error
-        console.log('[ERROR] ', error.response?.data?.message 
-          || error.response?.data || error.message);
-        // reject the promise if there was an error
-        const resolver = this.requestMap.get(request_id);
-        if (resolver) {
-          // reject error.response with data if it has any
-          resolver.reject(error.response?.data ? {
-              status: error.response.status,
-              ...error.response.data
-          } : error);
-          this.requestMap.delete(request_id);
+      console.log('[ERROR] ', error.response?.data?.message
+        || error.response?.data || error.message);
+      const resolver = this.requestMap.get(request_id);
+      if (resolver) {
+        if (error.response) {
+          resolver.reject({
+            status: error.response.status,
+            data: error.response.data,
+            headers: error.response.headers
+          });
+        } else {
+          resolver.reject(error);
+        }
+        this.requestMap.delete(request_id);
       }
     }
     this.isProcessing = false;
+    // process next
     this.processQueue();
   }
 }
