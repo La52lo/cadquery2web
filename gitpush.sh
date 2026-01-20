@@ -9,6 +9,6 @@ fi
 git add .
 git commit -m "$msg"
 git pull --rebase
-git push origin main
+git push myfork main
 
 echo "Pushed to GitHub! Message: $msg"
