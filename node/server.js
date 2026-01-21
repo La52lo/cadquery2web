@@ -6,8 +6,9 @@ const express = require('express');
 const rate_limit = require('express-rate-limit');
 const cors = require('cors');
 
-const { getCodeFromGroq } = require('./groqClient');
 const RequestQueue = require('./RequestQueue');
+const { getCodeFromGroq } = require('./groqFetch');
+
 
 const app = express();
 app.set('trust proxy', 1);
