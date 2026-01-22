@@ -6,14 +6,20 @@ FROM ubuntu:22.04
 WORKDIR /app
 # prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    libxrender1 \
+    libxext6 \
+    libsm6 \
+    libgl1 \
+    libglx-mesa0 \
+    && rm -rf /var/lib/apt/lists/*
+
 # install system dependencies and Python
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-dev \
     python3-venv \
-    libgl1 \
-    libglx-mesa0 \
     && rm -rf /var/lib/apt/lists/*
 # create and activate virtual environment
 ENV VENV=/opt/venv
