@@ -69,11 +69,16 @@ function initViewer() {
 	
 
 	const cameraControls = new CameraControls(camera, renderer.domElement);
+	// expose controls and objects globally so other functions can access them
 	window.renderer = renderer;
     window.scene = scene;
     window.camera = camera;
-	
-    if (window.controls && window.controls.update) window.controls.update();
+    window.controls = cameraControls;
+
+    // CameraControls requires a delta each frame; use a clock to provide it
+    const clock = new THREE.Clock();
+
+    if (window.controls && window.controls.update) window.controls.update(0);
 
     // resize handler
     window.addEventListener('resize', () => {
@@ -87,7 +92,8 @@ function initViewer() {
     // animation loop
     function animate() {
       requestAnimationFrame(animate);
-      if (window.controls && window.controls.update) window.controls.update();
+      const delta = clock.getDelta();
+      if (window.controls && window.controls.update) window.controls.update(delta);
       renderer.render(scene, camera);
     }
     animate();
@@ -205,9 +211,13 @@ async function onPreviewClick(e) {
           const distance = Math.max(radius * 2.5, 10);
           cam.position.copy(center.clone().add(new THREE.Vector3(distance, distance, distance)));
           cam.lookAt(center);
-          window.controls.target.copy(center);
-          window.controls.update(); 
-		  
+          // prefer CameraControls API if available
+          if (typeof window.controls.setTarget === 'function') {
+            window.controls.setTarget(center.x, center.y, center.z, true);
+          } else if (window.controls.target) {
+            window.controls.target.copy(center);
+            window.controls.update(0);
+          }
         }
 
       } catch (err) {
