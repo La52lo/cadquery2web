@@ -13,6 +13,7 @@ import numpy as np
 import math
 import json
 import tempfile
+import builtins as _builtins  # <-- added
 
 app = Flask(__name__)
 validator = CadQueryValidator()
@@ -25,14 +26,30 @@ def execute(code):
   cleaned_code, error = validator.validate(code)
   if error:
     return None, error
-  # safe execute code
+
+  # safe import wrapper — only allow imports that the validator explicitly permits
+  def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    # validator.allowed_imports keys define modules that are allowed to be imported
+    allowed_modules = set(validator.allowed_imports.keys())
+    if name not in allowed_modules:
+      raise ImportError(f"Import of '{name}' is not allowed")
+    # delegate to real import for approved modules
+    return __import__(name, globals, locals, fromlist, level)
+
+  # build a minimal safe __builtins__ mapping and include the safe __import__
+  safe_builtins = {}
+  for name in validator.allowed_builtins:
+    # pull from builtins module (safer than relying on __builtins__ shape)
+    if hasattr(_builtins, name):
+      safe_builtins[name] = getattr(_builtins, name)
+  # add controlled import mechanism required for import statements to work
+  safe_builtins['__import__'] = safe_import
+
   globals_dict = {
     "cq": cq,
     "np": np,
     "math": math,
-    "__builtins__": {name: __builtins__[name] 
-      for name in validator.allowed_builtins
-      if name in __builtins__}
+    "__builtins__": safe_builtins
   }
   locals_dict = {}
   exec(cleaned_code, globals_dict, locals_dict)
@@ -115,6 +132,3 @@ def run_step():
     return response
   except Exception as e:
       return make_response(message=str(e), status=500)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)

@@ -1,4 +1,7 @@
 // main.js — updated to send Preview requests to either /code or /prompt depending on radio selection
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.173.0/+esm';
+import CameraControls from 'https://cdn.jsdelivr.net/npm/camera-controls@2.9.0/+esm';
+
 
 const api = window.location.origin + '/api/'; // base for endpoints; will call /code, /prompt, /stl, /step
 
@@ -26,16 +29,103 @@ function setProcessing(enabled) {
   }
 }
 
-// Attach event listeners
-document.addEventListener('DOMContentLoaded', () => {
+// three.js viewer initialization
+function initViewer() {
+  try {
+    const container = document.getElementById('viewer');
+    if (!container) throw new Error('#viewer element not found');
+
+    // renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.innerHTML = ''; // clear any previous content
+    container.appendChild(renderer.domElement);
+
+    // scene & camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
+
+    // lights
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    hemi.position.set(0, 200, 0);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(0, 200, 100);
+    scene.add(dir);
+
+    CameraControls.install({ THREE });
+	renderer.setClearColor(0xffffff);
+	scene.background = new THREE.Color(0xffffff);
+    // store on window for other functions to access
+    
+	
+	let gridHelper = new THREE.GridHelper(10, 10);
+	scene.add(gridHelper);
+
+    // default camera position
+    camera.position.set(0, 200, 400);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+	
+
+	const cameraControls = new CameraControls(camera, renderer.domElement);
+	window.renderer = renderer;
+    window.scene = scene;
+    window.camera = camera;
+	
+    if (window.controls && window.controls.update) window.controls.update();
+
+    // resize handler
+    window.addEventListener('resize', () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    });
+ 
+    // animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      if (window.controls && window.controls.update) window.controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    console.info('Viewer initialized');
+  } catch (err) {
+    console.error('initViewer failed:', err);
+    // ensure window.scene is not left undefined silently
+    window.scene = window.scene || null;
+  }
+}
+
+// Dom-ready handler to attach UI event listeners and init viewer
+function onDomReady() {
+  try {
+    initViewer();
+  } catch (err) {
+    console.error('Error initializing viewer on DOM ready:', err);
+  }
+
   const previewBtn = document.getElementById('preview-btn');
   const stlBtn = document.getElementById('stl-btn');
   const stepBtn = document.getElementById('step-btn');
 
-  previewBtn.addEventListener('click', onPreviewClick);
-  stlBtn.addEventListener('click', onStlClick);
-  stepBtn.addEventListener('click', onStepClick);
-});
+  if (previewBtn) previewBtn.addEventListener('click', onPreviewClick);
+  if (stlBtn) stlBtn.addEventListener('click', onStlClick);
+  if (stepBtn) stepBtn.addEventListener('click', onStepClick);
+}
+
+// Attach event listeners (handle the case DOMContentLoaded already fired)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', onDomReady);
+} else {
+  // document already ready
+  onDomReady();
+}
+
+// ... rest of file (unchanged) ...
 
 async function onPreviewClick(e) {
   const codeOrPrompt = document.getElementById('code-input').value || '';
@@ -70,26 +160,59 @@ async function onPreviewClick(e) {
     updateOutput(data.message || JSON.stringify(data), success);
 
     if (success && data.data && data.data !== "None") {
-      // Build or update model in three.js viewer (original behavior preserved)
-      // NOTE: existing three.js logic expected data.data.vertices and data.data.faces
-      // If you have the previous rendering logic, keep it — here's a minimal integration:
+      // Build or update model in three.js viewer
       try {
+        // ensure viewer exists
+        if (!window.scene) throw new Error('Viewer not initialized (window.scene is null)');
+
         // remove existing model if any
-        if (window.currentModel) {
+        if (window.currentModel && window.scene) {
           window.scene.remove(window.currentModel);
+          if (window.currentModel.geometry) window.currentModel.geometry.dispose();
+          if (window.currentModel.material) window.currentModel.material.dispose();
+          window.currentModel = null;
         }
+
+        // Positions - ensure Float32Array
+        const positions = new Float32Array(data.data.vertices);
+        const vertexCount = positions.length / 3;
+
+        // Indices - ensure appropriate TypedArray
+        let indexArray;
+        if (vertexCount > 65535) {
+          indexArray = new Uint32Array(data.data.faces);
+        } else {
+          indexArray = new Uint16Array(data.data.faces);
+        }
+
         const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.data.vertices, 3));
-        geometry.setIndex(data.data.faces);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setIndex(new THREE.BufferAttribute(indexArray, 1));
         geometry.computeVertexNormals();
-        const material = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.4, roughness: 0.6 });
+        geometry.computeBoundingSphere();
+
+        const material = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.4, roughness: 0.6, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(geometry, material);
         window.currentModel = mesh;
-        if (window.scene) {
-          scene.add(mesh);
+        window.scene.add(mesh);
+
+        // fit camera to model
+        if (geometry.boundingSphere && window.camera && window.controls) {
+          const bs = geometry.boundingSphere;
+          const center = bs.center;
+          const radius = bs.radius;
+          const cam = window.camera;
+          const distance = Math.max(radius * 2.5, 10);
+          cam.position.copy(center.clone().add(new THREE.Vector3(distance, distance, distance)));
+          cam.lookAt(center);
+          window.controls.target.copy(center);
+          window.controls.update(); 
+		  
         }
+
       } catch (err) {
         console.warn('Failed to render preview geometry:', err);
+        updateOutput('Failed to render preview geometry: ' + (err.message || err), false);
       }
     }
 
