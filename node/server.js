@@ -7,7 +7,7 @@ const rate_limit = require('express-rate-limit');
 const cors = require('cors');
 
 const RequestQueue = require('./RequestQueue');
-const { getCodeFromGroq } = require('./groqFetch');
+const { groqFetch } = require('./groqFetch');
 
 
 const app = express();
@@ -79,12 +79,12 @@ app.post('/:endpoint', async (req, res) => {
       // Call Groq and extract first fenced code block
       let groqResult;
       try {
-        groqResult = await getCodeFromGroq(prompt);
+        groqResult = await groqFetch(prompt);
       } catch (err) {
         console.error('[GROQ] request failed:', err.message || err.toString());
         return res.status(502).json({ data: 'none', message: `Groq processing failed: ${err.message || 'unknown'}` });
       }
-
+	  
       const extractedCode = groqResult.code;
       if (!extractedCode) {
         // no fenced code block found — return the raw response for debugging
