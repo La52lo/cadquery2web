@@ -6,26 +6,43 @@ import CameraControls from 'https://cdn.jsdelivr.net/npm/camera-controls@2.9.0/+
 const api = window.location.origin + '/api/'; // base for endpoints; will call /code, /prompt, /stl, /step
 
 // Helper: read which mode is selected ("code" or "prompt")
-function getMode() {
-  const el = document.querySelector('input[name="mode"]:checked');
-  return el ? el.value : 'code';
-}
 
+let tabs, panels,
+    btnPreview, btnSTL, btnSTEP,
+    promptInput, codeInput, viewer;
+
+
+
+// ---- Tab state ----
+let activeTab = 'prompt';
+
+
+function setActiveTab(name) {
+	activeTab = name;
+	tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+	Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === name));
+	// Preview is always allowed
+	btnPreview.disabled = false;
+	// Export only allowed from Code tab
+	const exportDisabled = name === 'prompt';
+	btnSTL.disabled = exportDisabled;
+	btnSTEP.disabled = exportDisabled;
+}
 // Minimal UI helpers (kept small and compatible with previous behaviour)
 function updateOutput(message, success = true) {
   const out = document.getElementById('output-container');
-  out.textContent = message;
+  out.textContent = message ;
   out.style.color = success ? '#0a0' : '#a00';
 }
 
 function setProcessing(enabled) {
-  const previewBtn = document.getElementById('preview-btn');
+ 
   if (enabled) {
-    previewBtn.disabled = true;
-    previewBtn.textContent = 'Processing...';
+    btnPreview.disabled = true;
+    btnPreview.textContent = 'Processing...';
   } else {
-    previewBtn.disabled = false;
-    previewBtn.textContent = 'Preview';
+    btnPreview.disabled = false;
+    btnPreview.textContent = 'Preview';
   }
 }
 
@@ -64,9 +81,9 @@ function initViewer() {
 	scene.add(gridHelper);
 
     // default camera position
-    camera.position.set(0, 200, 400);
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
-	
+    
+	camera.position.set(8, 8, 8);
+	camera.lookAt(0, 0, 0);
 
 	const cameraControls = new CameraControls(camera, renderer.domElement);
 	// expose controls and objects globally so other functions can access them
@@ -106,22 +123,6 @@ function initViewer() {
   }
 }
 
-// Dom-ready handler to attach UI event listeners and init viewer
-function onDomReady() {
-  try {
-    initViewer();
-  } catch (err) {
-    console.error('Error initializing viewer on DOM ready:', err);
-  }
-
-  const previewBtn = document.getElementById('preview-btn');
-  const stlBtn = document.getElementById('stl-btn');
-  const stepBtn = document.getElementById('step-btn');
-
-  if (previewBtn) previewBtn.addEventListener('click', onPreviewClick);
-  if (stlBtn) stlBtn.addEventListener('click', onStlClick);
-  if (stepBtn) stepBtn.addEventListener('click', onStepClick);
-}
 
 // Attach event listeners (handle the case DOMContentLoaded already fired)
 if (document.readyState === 'loading') {
@@ -132,10 +133,15 @@ if (document.readyState === 'loading') {
 }
 
 // ... rest of file (unchanged) ...
+tabs.forEach(tab => {
+tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
+});
+
 
 async function onPreviewClick(e) {
-  const codeOrPrompt = document.getElementById('code-input').value || '';
-  const mode = getMode(); // 'code' or 'prompt'
+  const payload = activeTab === 'prompt'
+	? { prompt: promptInput.value }
+	: { code: codeInput.value };
   setProcessing(true);
   updateOutput('Processing...', false);
 
@@ -143,18 +149,19 @@ async function onPreviewClick(e) {
     let body;
     let endpoint;
 
-    if (mode === 'prompt') {
+    if (activeTab === 'prompt') {
       endpoint = 'prompt';
-      body = { prompt: codeOrPrompt };
     } else {
       endpoint = 'code';
-      body = { code: codeOrPrompt };
     }
 
+	const payload = activeTab === 'prompt'
+		? { prompt: promptInput.value }
+		: { code: codeInput.value };
     const resp = await fetch(api + endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
 
     const statusCode = resp.status;
@@ -165,9 +172,10 @@ async function onPreviewClick(e) {
     const success = statusCode === 200 && data.message !== "none";
     updateOutput(data.message || JSON.stringify(data), success);
 
-    if (success && data.data && data.data !== "None") {
+    if (success && data.geometry && data.geometry !== "None") {
       // Build or update model in three.js viewer
-      try {
+      codeInput.value = data.code;
+	  try {
         // ensure viewer exists
         if (!window.scene) throw new Error('Viewer not initialized (window.scene is null)');
 
@@ -180,15 +188,15 @@ async function onPreviewClick(e) {
         }
 
         // Positions - ensure Float32Array
-        const positions = new Float32Array(data.data.vertices);
+        const positions = new Float32Array(data.geometry.vertices);
         const vertexCount = positions.length / 3;
 
         // Indices - ensure appropriate TypedArray
         let indexArray;
         if (vertexCount > 65535) {
-          indexArray = new Uint32Array(data.data.faces);
+          indexArray = new Uint32Array(data.geometry.faces);
         } else {
-          indexArray = new Uint16Array(data.data.faces);
+          indexArray = new Uint16Array(data.geometry.faces);
         }
 
         const geometry = new THREE.BufferGeometry();
@@ -224,7 +232,10 @@ async function onPreviewClick(e) {
         console.warn('Failed to render preview geometry:', err);
         updateOutput('Failed to render preview geometry: ' + (err.message || err), false);
       }
-    }
+    } else {
+	
+		updateOutput('Server error: ' + 'msg:' + data.message +"\nCode:\n" + data.code, false);
+	};
 
   } catch (err) {
     console.error('Preview request failed:', err);
@@ -232,10 +243,10 @@ async function onPreviewClick(e) {
   } finally {
     setProcessing(false);
   }
-}
+};
 
 async function onStlClick(e) {
-  const code = document.getElementById('code-input').value || '';
+  const code = codeInput.value || '';
   if (!code) {
     updateOutput('Please enter CadQuery code before requesting STL', false);
     return;
@@ -269,7 +280,7 @@ async function onStlClick(e) {
 }
 
 async function onStepClick(e) {
-  const code = document.getElementById('code-input').value || '';
+  const code = codeInput.value || '';
   if (!code) {
     updateOutput('Please enter CadQuery code before requesting STEP', false);
     return;
@@ -300,4 +311,37 @@ async function onStepClick(e) {
     console.error('STEP request failed:', err);
     updateOutput('STEP request failed: ' + (err.message || err), false);
   }
+}
+
+// Dom-ready handler to attach UI event listeners and init viewer
+function onDomReady() {
+  try { 
+	 tabs = document.querySelectorAll('.tab');
+		panels = {
+			prompt: document.getElementById('panel-prompt'),
+			code: document.getElementById('panel-code')
+		};
+
+		btnPreview = document.getElementById('btnPreview');
+		btnSTL = document.getElementById('btnSTL');
+		btnSTEP = document.getElementById('btnSTEP');
+
+		promptInput = document.getElementById('promptInput');
+		codeInput = document.getElementById('codeInput');
+		viewer = document.getElementById('viewer');
+		setActiveTab('prompt');
+	 tabs.forEach(tab => {
+		tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
+	});
+
+	// Preview is always allowed
+	btnPreview.disabled = false;
+	btnPreview.addEventListener('click', onPreviewClick);
+	btnSTL.addEventListener('click', onStlClick);
+	btnSTEP.addEventListener('click', onStepClick);
+    initViewer();
+  } catch (err) {
+    console.error('Error initializing viewer on DOM ready:', err);
+  }
+
 }

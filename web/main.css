@@ -39,7 +39,15 @@ body, html {
   background: #1a1a1a;
 }
 
-#code-input {
+.tabs { display: flex; border-bottom: 1px solid #ccc; }
+.tab { padding: 8px 12px; cursor: pointer;color:#969696 }
+.tab.active {  font-weight: bold;color: #ffffff; }
+.panel { 
+	display: none;
+	height: 200px; }
+.panel.active { display: block; }
+
+#promptInput, #codeInput  {
   width: 100%;
   flex: 1;
   margin: 20px 0;
@@ -52,6 +60,7 @@ body, html {
   border-radius: 4px;
   padding: 10px;
 }
+
 
 h1 {
   margin: 0;
@@ -98,7 +107,7 @@ h1 a:hover {
 }
 
 .output-container {
-  display: none;
+  /*display: none;*/
   max-height: 20%;
   background: #363636;
   border: 1px solid #404040;
@@ -138,7 +147,7 @@ canvas {
   height: 100% !important;
 }
 
-.button-disabled {
+.render-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;

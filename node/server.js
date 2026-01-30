@@ -63,7 +63,9 @@ ${safeBody.toString().split('\n').map(line => '    ' + line).join('\n')}
 });
 
 app.post('/:endpoint', async (req, res) => {
+  let extractedCode,code;
   try {
+	
     const endpoint = req.params.endpoint;
     if (!VALID_ENDPOINTS.includes(endpoint)) {
       return res.status(400).json({ data: 'none', message: 'Invalid endpoint' });
@@ -85,13 +87,13 @@ app.post('/:endpoint', async (req, res) => {
         return res.status(502).json({ data: 'none', message: `Groq processing failed: ${err.message || 'unknown'}` });
       }
 	  
-      const extractedCode = groqResult.code;
+      extractedCode = groqResult.code;
       if (!extractedCode) {
-        // no fenced code block found — return the raw response for debugging
+        // no code block found — return the raw response for debugging
         return res.status(422).json({
           data: 'none',
           message: 'No fenced code block found in Groq response',
-          rawResponse: groqResult.raw
+          code: groqResult.raw
         });
       }
 
@@ -100,16 +102,19 @@ app.post('/:endpoint', async (req, res) => {
       const response = await requestQueue.addRequest(cadqEndpoint, extractedCode);
 
       if (response && response.status === 200) {
-        return res.status(200).json(response.data);
-      } else {
+		  return res.status(200).json({
+			geometry: response.data?.geometry ?? response.data,
+			code: extractedCode
+		  });
+	} else {
         const status = response?.status || 500;
-        const data = response?.data || { data: 'none', message: 'Unknown error from cadquery' };
+        const data = response?.data || { data: 'none',code:extractedCode, message: 'Unknown error from cadquery' };
         return res.status(status).json(data);
       }
     }
 
     // 2) code / stl / step endpoints: expect { code: "..." } in body
-    const code = req.body?.code;
+    code = req.body?.code;
     if (typeof code !== 'string') {
       return res.status(400).json({ data: 'none', message: 'Request must include a string "code" field in body' });
     }
@@ -125,15 +130,17 @@ app.post('/:endpoint', async (req, res) => {
       res.setHeader('Content-Type', response.headers?.['content-type'] || 'application/octet-stream');
       return res.status(response.status || 200).send(response.data);
     } else {
-      return res.status(response.status || 200).json(response.data);
+      return res.status(response.status || 200).json({
+		  geometry: response.data.data,
+		  code:code,
+		  message:response.data.message
+		});
     }
 
   } catch (error) {
-    if (error && error.status && error.data) {
-      return res.status(error.status).json(error.data);
-    }
-    console.error('[SERVER] unhandled error:', error);
-    return res.status(500).json({ data: 'none', message: error.message || 'Internal server error' });
+    
+    console.error('[SERVER]  error:', error);
+    return res.status(500).json({ data: 'none', code: extractedCode ?? code ?? "no code found",message: error.message ?? error.data.message ?? error.data ?? 'Internal server error' });
   }
 });
 
