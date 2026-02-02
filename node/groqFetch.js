@@ -78,6 +78,77 @@ If yes, correct it before output.
 `;
 
 
+const validatorPrompt = `here is a code snipptet from the validator listing allowed operations.  Make sure the produced code complies these rules. self.allowed_imports = {
+      'cadquery': {'as': {'cq'}},  # only allow "import cadquery as cq"
+      'math': {'functions': {
+        'sin', 'cos', 'tan', 'pi', 'sqrt',
+        'radians', 'degrees', 'atan2'
+      }},
+      'numpy': {
+        'as': {'np'},
+        'functions': {
+          # array creation and manipulation
+          'array', 'zeros', 'ones', 'linspace', 'arange',
+          # math operations
+          'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 'arctan2',
+          'deg2rad', 'rad2deg', 'pi',
+          'sqrt', 'square', 'power', 'exp', 'log', 'log10',
+          # statistics
+          'mean', 'median', 'std', 'min', 'max',
+          # linear algebra
+          'dot', 'cross', 'transpose',
+          # rounding
+          'floor', 'ceil', 'round',
+          # array operations
+          'concatenate', 'stack', 'reshape', 'flatten'
+        }
+      }
+    }
+    # expanded set of allowed CadQuery operations
+    self.allowed_cq_operations = {
+      # core operations
+      'Workplane', 'box', 'circle', 'cylinder', 'sphere',
+      'extrude', 'revolve', 'union', 'cut', 'fillet',
+      'chamfer', 'vertices', 'edges', 'faces', 'shell',
+      'offset2D', 'offset', 'wire', 'rect', 'polygon',
+      'polyline', 'spline', 'close', 'moveTo', 'lineTo',
+      'line', 'vLineTo', 'hLineTo', 'mirrorY', 'mirrorX',
+      'translate', 'rotate', 'size',
+      # additional 2D operations
+      'center', 'radiusArc', 'threePointArc', 'ellipse',
+      'ellipseArc', 'close', 'section', 'slot',
+      # 3D operations
+      'loft', 'sweep', 'twistExtrude', 'ruled',
+      'wedge', 'cone', 'hull', 'mirror',
+      # selection operations
+      'all', 'size', 'item', 'itemAt', 'first', 'last',
+      'end', 'vertices', 'faces', 'edges', 'wires', 'solids',
+      'shells', 'compounds', 'vals', 'add', 'combine',
+      # workplane operations
+      'workplane', 'plane', 'plane', 'transformed',
+      'center', 'pushPoints', 'cutBlind', 'cutThruAll',
+      'close', 'toPending', 'workplaneFromTagged',
+      # selector strings as attributes
+      'tag', 'end', 'val', 'wire', 'solid', 'face',
+      # direction selectors
+      'rarray', 'polarArray', 'grid',
+      # boolean operations
+      'intersect', 'combine', 'each',
+      # measurement and inspection
+      'val', 'vals', 'dump',
+      # string constants for plane selection
+      'XY', 'YZ', 'XZ', 'front', 'back', 'left', 
+      'right', 'top', 'bottom',
+      # common string selectors
+      '|Z', '>Z', '<Z', '|X', '>X', '<X', 
+      '|Y', '>Y', '<Y', '#Z', '#X', '#Y'
+    }
+    # extremely limited set of allowed builtins
+    self.allowed_builtins = {
+      'float', 'int', 'bool', 'str', 'list', 'tuple',
+      'True', 'False', 'None', 'range', 'len'
+    }`;
+
 async function groqFetch(prompt)
 {
   try {
@@ -93,6 +164,10 @@ async function groqFetch(prompt)
           {
             role: 'user',
             content: prompt,
+          },
+		  {
+            role: 'user',
+            content: validatorPrompt,
           },
         ],
         model: GEMINI_MODEL, // Example model, check Groq docs for latest models
@@ -118,13 +193,13 @@ async function groqFetch(prompt)
         },
       }
     );
-	console.log('request', response); 
+	//console.log('request', response); 
     //console.log('API Call Result:', response.data);
 	//const rawResponse = response?.["assistant response"].content;
 	const rawResponse = response.data.choices[0].message.content;
 	const stringResponse = (typeof rawResponse === "string") ? rawResponse : "";
     
-    console.log('\nfull response', response.data.choices[0]);
+    //console.log('\nfull response', response.data.choices[0]);
 	// 3. Extract the content [11]
     
     // 4. Extract code (assuming markdown ```code``` blocks)
@@ -132,18 +207,36 @@ async function groqFetch(prompt)
     const matches = [...stringResponse.matchAll(codeBlockRegex)];
 	//console.log('matches Response:', matches);
     const extractedCode = matches.map(match => match[1]).join('\n');
-	console.log('Code Response:', extractedCode?.trim() || rawResponse);
+	//console.log('extrCode Response:' + extractedCode?.trim()  +  "\nstringresp:" + stringResponse) ;
 	const result = {}; // Create an empty object
 
 	// Add and populate the fields
 	result.code = extractedCode?.trim() || stringResponse;
 	result.raw = stringResponse;
+	debugVar("extractedCode", extractedCode);
+	debugVar("extractedCode.trim()", extractedCode?.trim());
+	debugVar("stringResponse", stringResponse);
+	debugVar("result.code", result.code);
 	return result;
   } catch (error) {
     console.error('Error making Groq API request:', error.response ? error.response.data : error.message);
   }
 };
 
+function debugVar(name, v) {
+  console.log(name, {
+    value: v,
+    typeof: typeof v,
+    isNull: v === null,
+    isUndefined: v === undefined,
+    isFalsy: !v,
+    length: typeof v === "string" ? v.length : undefined,
+    json: JSON.stringify(v),
+    chars: typeof v === "string"
+      ? [...v].map(c => c.charCodeAt(0))
+      : undefined
+  });
+}
 
 
 module.exports = { groqFetch };

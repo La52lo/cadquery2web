@@ -63,48 +63,98 @@ ${safeBody.toString().split('\n').map(line => '    ' + line).join('\n')}
 });
 
 app.post('/:endpoint', async (req, res) => {
-  let extractedCode,code;
   try {
-	
     const endpoint = req.params.endpoint;
     if (!VALID_ENDPOINTS.includes(endpoint)) {
       return res.status(400).json({ data: 'none', message: 'Invalid endpoint' });
     }
 
     // 1) Prompt endpoint: expect { prompt: "..." }
-    if (endpoint === 'prompt') {
-      const prompt = req.body?.prompt;
-      if (!prompt || typeof prompt !== 'string') {
-        return res.status(400).json({ data: 'none', message: 'Missing "prompt" string in request body' });
-      }
+	if (endpoint === 'prompt') {
+	  // ---- validate early (before flush) ----
+	  const prompt = req.body?.prompt;
+	  if (!prompt || typeof prompt !== 'string') {
+		return res.status(400).json({
+		  ok: false,
+		  message: 'Missing "prompt" string in request body'
+		});
+	  }
 
-      // Call Groq and extract first fenced code block
-      let groqResult;
-      try {
-        groqResult = await groqFetch(prompt);
-      } catch (err) {
-        console.error('[GROQ] request failed:', err.message || err.toString());
-        return res.status(502).json({ data: 'none', message: `Groq processing failed: ${err.message || 'unknown'}` });
-      }
-	  
-      extractedCode = groqResult.code;
-      if (!extractedCode) {
-        // no code block found — return the raw response for debugging
-        return res.status(422).json({
-          data: 'none',
-          message: 'No fenced code block found in Groq response',
-          code: groqResult.raw
-        });
-      }
+	  // ---- commit headers EARLY ----
+	  res.status(200);
+	  res.setHeader("Content-Type", "application/json; charset=utf-8");
+	  res.flushHeaders();
+	  const heartbeat = setInterval(() => {
+		  if (!res.writableEnded) {
+			res.write(" ");
+		  }
+		}, 10_000);
 
-      // Queue extracted code for cadquery preview
-      //const cadqEndpoint = cadqueryEndpointFor('prompt'); // preview
- 
-    }
+	  let extractedCode;
+
+	  try {
+		const groqResult = await groqFetch(prompt);
+		extractedCode = groqResult.code;
+		console.log("2nd extract :", {
+		  value: extractedCode,
+		  typeof: typeof extractedCode,
+		  length: extractedCode?.length,
+		  isFalsy: !extractedCode,
+		  json: JSON.stringify(extractedCode),
+		});
+		if (!extractedCode) {
+			clearInterval(heartbeat);
+		  return res.end(JSON.stringify({
+			ok: false,
+			message: 'No fenced code block found in Groq response',
+			rawResponse: groqResult.raw
+		  }));
+		}
+		}
+	   catch (err) {
+		console.error('[LLM] request failed:', err);
+		clearInterval(heartbeat);
+		return res.end(JSON.stringify({
+		  ok: false,
+		  message: 'LLM processing failed',
+		  error: err.message || String(err)
+		}));
+	  }
+
+	  try {
+		const cadqEndpoint = cadqueryEndpointFor('prompt');
+		const response = await requestQueue.addRequest(cadqEndpoint, extractedCode);
+
+		if (response?.status === 200) {
+			clearInterval(heartbeat);
+		  return res.end(JSON.stringify({
+			ok: true,
+			geometry: response.data,
+			code: extractedCode
+		  }));
+		}
+		clearInterval(heartbeat);
+		return res.end(JSON.stringify({
+		  ok: false,
+		  message: 'CadQuery backend error',
+		  status: response?.status ?? 500,
+		  data: response?.data ?? null
+		}));
+
+	  } catch (err) {
+		console.error('[QUEUE] failed:', err);
+		clearInterval(heartbeat);
+		return res.end(JSON.stringify({
+		  ok: false,
+		  message: 'Internal queue error',
+		  error: err.message || String(err)
+		}));
+	  }
+	}
+
 
     // 2) code / stl / step endpoints: expect { code: "..." } in body
-	
-    code = extractedCode ?? req.body?.code;
+    const code = req.body?.code;
     if (typeof code !== 'string') {
       return res.status(400).json({ data: 'none', message: 'Request must include a string "code" field in body' });
     }
@@ -121,16 +171,17 @@ app.post('/:endpoint', async (req, res) => {
       return res.status(response.status || 200).send(response.data);
     } else {
       return res.status(response.status || 200).json({
-		  geometry: response.data.data,
-		  code:code,
-		  message:response.data.message
+		  geometry: response.data,
+		  code:code
 		});
     }
 
   } catch (error) {
-    
-    console.error('[SERVER]  error:', error);
-    return res.status(500).json({ data: 'none', code: extractedCode ?? code ?? "no code found",message: error.message ?? error.data.message ?? error.data ?? 'Internal server error' });
+    if (error && error.status && error.data) {
+      return res.status(error.status).json(error.data);
+    }
+    console.error('[SERVER] unhandled error:', error);
+    return res.status(500).json({ data: 'none', message: error.message || 'Internal server error' });
   }
 });
 

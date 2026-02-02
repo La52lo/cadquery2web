@@ -188,15 +188,15 @@ async function onPreviewClick(e) {
         }
 
         // Positions - ensure Float32Array
-        const positions = new Float32Array(data.geometry.vertices);
+        const positions = new Float32Array(data.geometry.data.vertices);
         const vertexCount = positions.length / 3;
 
         // Indices - ensure appropriate TypedArray
         let indexArray;
         if (vertexCount > 65535) {
-          indexArray = new Uint32Array(data.geometry.faces);
+          indexArray = new Uint32Array(data.geometry.data.faces);
         } else {
-          indexArray = new Uint16Array(data.geometry.faces);
+          indexArray = new Uint16Array(data.geometry.data.faces);
         }
 
         const geometry = new THREE.BufferGeometry();
