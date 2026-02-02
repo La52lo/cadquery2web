@@ -6,10 +6,13 @@ const GROQ_TIMEOUT_MS = parseInt(process.env.GROQ_TIMEOUT_MS || '60000', 10);
 const GROQ_MODEL = process.env.GROQ_MODEL || null; // e.g. 
 const GROQ_MAX_TOKENS = parseInt(process.env.GROQ_MAX_TOKENS|| '1024', 10);
 const GROQ_REASONING_EFFORT = process.env.GROQ_REASONING_EFFORT;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_URL = process.env.GEMINI_BASE_URL;
+const GEMINI_MODEL = process.env.GEMINI_MODEL;
 if (!GROQ_URL) {
   console.warn('Warning: GROQ_URL is not configured. /prompt will fail until GROQ_URL is set.');
 }
-console.log('url:',GROQ_URL );
+console.log('url:',GEMINI_URL );
 /**
  * Execute a GROQ query against a generic GROQ service.
  * Expects the GROQ service to accept POST { query, params } and return JSON.
@@ -80,7 +83,7 @@ async function groqFetch(prompt)
   try {
 	
     const response = await axios.post(
-      GROQ_URL,
+      GEMINI_URL,
       {
         messages: [
           {
@@ -92,22 +95,30 @@ async function groqFetch(prompt)
             content: prompt,
           },
         ],
-        model: GROQ_MODEL, // Example model, check Groq docs for latest models
-        temperature: 0.7,
-        top_p: 1,
+        model: GEMINI_MODEL, // Example model, check Groq docs for latest models
+        //temperature: 0.7,
+        //top_p: 1,
         stream: false,
-		include_reasoning:false,
-		reasoning_effort:GROQ_REASONING_EFFORT,
-		max_tokens: GROQ_MAX_TOKENS,
+		//include_reasoning:false,
+		//reasoning_effort:GROQ_REASONING_EFFORT,
+		extra_body: {
+		  "google": {
+			"thinking_config": {
+			  //"thinking_level": "low",
+			  "include_thoughts": false
+			}
+		  }
+		},
+		//max_tokens: GROQ_MAX_TOKENS,
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
         },
       }
     );
-	console.log('request', JSON.parse(response.config.data)); 
+	console.log('request', response); 
     //console.log('API Call Result:', response.data);
 	//const rawResponse = response?.["assistant response"].content;
 	const rawResponse = response.data.choices[0].message.content;

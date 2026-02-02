@@ -98,23 +98,13 @@ app.post('/:endpoint', async (req, res) => {
       }
 
       // Queue extracted code for cadquery preview
-      const cadqEndpoint = cadqueryEndpointFor('prompt'); // preview
-      const response = await requestQueue.addRequest(cadqEndpoint, extractedCode);
-
-      if (response && response.status === 200) {
-		  return res.status(200).json({
-			geometry: response.data?.geometry ?? response.data,
-			code: extractedCode
-		  });
-	} else {
-        const status = response?.status || 500;
-        const data = response?.data || { data: 'none',code:extractedCode, message: 'Unknown error from cadquery' };
-        return res.status(status).json(data);
-      }
+      //const cadqEndpoint = cadqueryEndpointFor('prompt'); // preview
+ 
     }
 
     // 2) code / stl / step endpoints: expect { code: "..." } in body
-    code = req.body?.code;
+	
+    code = extractedCode ?? req.body?.code;
     if (typeof code !== 'string') {
       return res.status(400).json({ data: 'none', message: 'Request must include a string "code" field in body' });
     }
