@@ -143,7 +143,7 @@ async function onPreviewClick(e) {
 	? { prompt: promptInput.value }
 	: { code: codeInput.value };
   setProcessing(true);
-  updateOutput('Processing...', false);
+  updateOutput('Processing...can take minutes', false);
 
   try {
     let body;
@@ -174,7 +174,7 @@ async function onPreviewClick(e) {
 
     if (success && data.geometry && data.geometry !== "None") {
       // Build or update model in three.js viewer
-      codeInput.value = data.code;
+      if (activeTab === 'prompt') codeInput.value = data.code;
 	  try {
         // ensure viewer exists
         if (!window.scene) throw new Error('Viewer not initialized (window.scene is null)');
@@ -235,6 +235,7 @@ async function onPreviewClick(e) {
     } else {
 	
 		updateOutput('Server error: ' + 'msg:' + data.message +"\nCode:\n" + data.code, false);
+		if (activeTab === 'prompt') codeInput.value = data.code || "";
 	};
 
   } catch (err) {

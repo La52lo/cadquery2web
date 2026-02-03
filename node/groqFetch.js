@@ -213,10 +213,6 @@ async function groqFetch(prompt)
 	// Add and populate the fields
 	result.code = extractedCode?.trim() || stringResponse;
 	result.raw = stringResponse;
-	debugVar("extractedCode", extractedCode);
-	debugVar("extractedCode.trim()", extractedCode?.trim());
-	debugVar("stringResponse", stringResponse);
-	debugVar("result.code", result.code);
 	return result;
   } catch (error) {
     console.error('Error making Groq API request:', error.response ? error.response.data : error.message);

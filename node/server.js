@@ -95,13 +95,6 @@ app.post('/:endpoint', async (req, res) => {
 	  try {
 		const groqResult = await groqFetch(prompt);
 		extractedCode = groqResult.code;
-		console.log("2nd extract :", {
-		  value: extractedCode,
-		  typeof: typeof extractedCode,
-		  length: extractedCode?.length,
-		  isFalsy: !extractedCode,
-		  json: JSON.stringify(extractedCode),
-		});
 		if (!extractedCode) {
 			clearInterval(heartbeat);
 		  return res.end(JSON.stringify({
@@ -147,7 +140,8 @@ app.post('/:endpoint', async (req, res) => {
 		return res.end(JSON.stringify({
 		  ok: false,
 		  message: 'Internal queue error',
-		  error: err.message || String(err)
+		  error: err.message || String(err),
+		  code: extractedCode || ""
 		}));
 	  }
 	}
@@ -178,10 +172,16 @@ app.post('/:endpoint', async (req, res) => {
 
   } catch (error) {
     if (error && error.status && error.data) {
-      return res.status(error.status).json(error.data);
+		return res.end(JSON.stringify({
+			  ok: false,
+			  message: 'python error',
+			  error: error.message || String(err),
+			  code: code || ""
+		}))
+      //return res.status(error.status).json(error.data);
     }
     console.error('[SERVER] unhandled error:', error);
-    return res.status(500).json({ data: 'none', message: error.message || 'Internal server error' });
+    return res.status(500).json({ data: 'none', message: error.message || 'Internal server error',code: code || "" });
   }
 });
 
