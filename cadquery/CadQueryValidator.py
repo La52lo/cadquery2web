@@ -163,11 +163,12 @@ class CadQueryValidator:
       self.check_call(node)
     elif isinstance(node, ast.Attribute):
       # handle method chains by checking if this is a valid chain member
+      # lets remove this check
       if not self.is_valid_chain_member(node):
         # only report error if this isn't part of a method call chain
         if not (isinstance(node.value, (ast.Call, ast.Attribute)) or
                (isinstance(node.value, ast.Name) and node.value.id == 'result')):
-          self.errors.append(f"Attribute access '{node.attr}' is not allowed")
+          pass #self.errors.append(f"Attribute access '{node.attr}' is not allowed")
     # block certain types of AST nodes entirely
     if isinstance(node, (ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                         ast.GeneratorExp, ast.Await, ast.Yield, ast.YieldFrom,

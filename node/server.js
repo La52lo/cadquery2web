@@ -63,6 +63,7 @@ ${safeBody.toString().split('\n').map(line => '    ' + line).join('\n')}
 });
 
 app.post('/:endpoint', async (req, res) => {
+  let code;
   try {
     const endpoint = req.params.endpoint;
     if (!VALID_ENDPOINTS.includes(endpoint)) {
@@ -102,6 +103,8 @@ app.post('/:endpoint', async (req, res) => {
 			message: 'No fenced code block found in Groq response',
 			rawResponse: groqResult.raw
 		  }));
+		} else {
+			extractedCode = extractedCode.replace(/`+$/, ""); //remove random backticks
 		}
 		}
 	   catch (err) {
@@ -116,6 +119,7 @@ app.post('/:endpoint', async (req, res) => {
 
 	  try {
 		const cadqEndpoint = cadqueryEndpointFor('prompt');
+		
 		const response = await requestQueue.addRequest(cadqEndpoint, extractedCode);
 
 		if (response?.status === 200) {
@@ -148,7 +152,7 @@ app.post('/:endpoint', async (req, res) => {
 
 
     // 2) code / stl / step endpoints: expect { code: "..." } in body
-    const code = req.body?.code;
+    code = req.body?.code;
     if (typeof code !== 'string') {
       return res.status(400).json({ data: 'none', message: 'Request must include a string "code" field in body' });
     }
@@ -175,8 +179,8 @@ app.post('/:endpoint', async (req, res) => {
 		return res.end(JSON.stringify({
 			  ok: false,
 			  message: 'python error',
-			  error: error.message || String(err),
-			  code: code || ""
+			  error: error.message || String(error),
+			  code: code ?? ""
 		}))
       //return res.status(error.status).json(error.data);
     }

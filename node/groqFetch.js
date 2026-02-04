@@ -33,7 +33,11 @@ GLOBAL RULES (mandatory):
 - Never create cuts from assumed offsets or absolute Z values.
 - Every cut MUST originate from an explicitly selected face using faces(">Z"), faces("<Z"), faces(">X"), etc.
 - Every cutting operation must remove a non-zero volume that provably intersects the target solid.
+- If additional sketches, cuts, or features are applied after a solid is created, do not use .translate() on the solid instead move the workplane using .transformed(translate=...)
+- After any operation that changes either the solid frame or the workplane frame, the next feature must explicitly re-anchor the workplane using faces(...).workplane() unless the transform is intentionally part of the same feature.
 - Do NOT rely on visual intuition. Track bounding boxes mentally.
+- Do NOT apply fillets
+- Prefer area primitives over polylines whenever possible.
 
 CUT-SAFETY RULES (critical):
 - Every cut must follow this exact pattern:
@@ -44,6 +48,13 @@ CUT-SAFETY RULES (critical):
 - If a cut would accidentally hollow the part, redesign it as a bounded cut.
 - No cut or hole may be tangent to an outer face; all features must leave a positive wall thickness ≥ 0.2 mm.
 - Lips are created by not cutting material, not by cutting more.
+
+
+POLYLINE RULES (critical):
+- Never extrude a polyline unless it has ≥3 points
+- Never extrude a polyline unless .close() is called beforehand
+- Never extrude a polyline if the polyline points are collinear
+
 
 WORKPLANE RULES:
 - workplane(offset=...) is only allowed immediately after a face selection.
