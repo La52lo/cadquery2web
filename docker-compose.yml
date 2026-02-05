@@ -10,15 +10,20 @@ services:
       - api
     container_name: cadquery2web_web
   node:
-    build: ./node
+    build: 
+      context: .
+      dockerfile: node/Dockerfile
     ports:
       - 49158:3000
+      - 5173:5173
     env_file:
       - ./node/.env
     depends_on:
       - cadquery
     volumes:
       - ./logs:/logs
+      - ./web:/app/web    # ← host ~/cadquery2web/web → container /app/web
+      - ./node:/app/node
     networks:
       - cadquery
       - api

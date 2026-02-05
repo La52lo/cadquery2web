@@ -3,22 +3,42 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.173.0/+esm';
 import CameraControls from 'https://cdn.jsdelivr.net/npm/camera-controls@2.9.0/+esm';
 
 
-const api = window.location.origin + '/api/'; // base for endpoints; will call /code, /prompt, /stl, /step
+const api = window.location.origin + '/api/'; // base for endpoints; will call /code, /prompt, /stl, /step  
+//const api = "http://172.27.99.108:49157" + '/api/';
 
 // Helper: read which mode is selected ("code" or "prompt")
+//import { EditorView } from "@codemirror/view";
+//import { EditorState } from "@codemirror/state";
+//import { basicSetup } from "@codemirror/basic-setup";
+import { python } from "@codemirror/lang-python";
+import {EditorView, basicSetup} from "codemirror"
+import { quietlight } from "@uiw/codemirror-theme-quietlight"; // Example import
+
 
 let tabs, panels,
     btnPreview, btnSTL, btnSTEP,
     promptInput, codeInput, viewer;
 
-
+ 
 
 // ---- Tab state ----
 let activeTab = 'prompt';
 
+let codeEditor;
+
+function initCodeEditor(initialCode = "") {
+  const parent = document.getElementById("codeEditor");
+  const forceLight = EditorView.theme({}, { dark: false });
+  codeEditor = new EditorView({
+    doc: initialCode,
+    parent,
+    extensions: [python(),basicSetup,quietlight]
+  });
+}
 
 function setActiveTab(name) {
 	activeTab = name;
+	
 	tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
 	Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === name));
 	// Preview is always allowed
@@ -27,12 +47,45 @@ function setActiveTab(name) {
 	const exportDisabled = name === 'prompt';
 	btnSTL.disabled = exportDisabled;
 	btnSTEP.disabled = exportDisabled;
+	
+	const layout = document.getElementById("container");
+
+	if (name == 'viewer') {
+		layout.classList.remove("code-mode");
+		document.querySelectorAll(".render-btn").forEach(el => {
+			el.classList.add("hidden");
+		});
+	}
+		else {
+			layout.classList.add("code-mode");
+			document.querySelectorAll(".render-btn").forEach(el => {
+			el.classList.remove("hidden");
+		});
+			if (codeEditor) {
+			  setTimeout(() => codeEditor.requestMeasure(), 0);
+			}
+		}
 }
 // Minimal UI helpers (kept small and compatible with previous behaviour)
 function updateOutput(message, success = true) {
   const out = document.getElementById('output-container');
   out.textContent = message ;
   out.style.color = success ? '#0a0' : '#a00';
+}
+
+function setEditorCode(code) {
+  const transaction = codeEditor.state.update({
+    changes: {
+      from: 0,
+      to: codeEditor.state.doc.length,
+      insert: code
+    }
+  });
+  codeEditor.dispatch(transaction);
+}
+
+function getEditorCode() {
+  return codeEditor.state.doc.toString();
 }
 
 function setProcessing(enabled) {
@@ -132,16 +185,11 @@ if (document.readyState === 'loading') {
   onDomReady();
 }
 
-// ... rest of file (unchanged) ...
-tabs.forEach(tab => {
-tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
-});
-
 
 async function onPreviewClick(e) {
   const payload = activeTab === 'prompt'
 	? { prompt: promptInput.value }
-	: { code: codeInput.value };
+	: { code: getEditorCode() };
   setProcessing(true);
   updateOutput('Processing...can take minutes', false);
 
@@ -155,9 +203,7 @@ async function onPreviewClick(e) {
       endpoint = 'code';
     }
 
-	const payload = activeTab === 'prompt'
-		? { prompt: promptInput.value }
-		: { code: codeInput.value };
+	
     const resp = await fetch(api + endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -174,7 +220,7 @@ async function onPreviewClick(e) {
 
     if (success && data.geometry && data.geometry !== "None") {
       // Build or update model in three.js viewer
-      if (activeTab === 'prompt') codeInput.value = data.code;
+      if (activeTab === 'prompt') setEditorCode(data.code);
 	  try {
         // ensure viewer exists
         if (!window.scene) throw new Error('Viewer not initialized (window.scene is null)');
@@ -235,7 +281,7 @@ async function onPreviewClick(e) {
     } else {
 	
 		updateOutput('Server error: ' + 'msg:' + data.message +"\nCode:\n" + data.code, false);
-		if (activeTab === 'prompt') codeInput.value = data.code || "";
+		if (activeTab === 'prompt') setEditorCode(data.code || "");
 	};
 
   } catch (err) {
@@ -247,7 +293,7 @@ async function onPreviewClick(e) {
 };
 
 async function onStlClick(e) {
-  const code = codeInput.value || '';
+  const code = getEditorCode() || '';
   if (!code) {
     updateOutput('Please enter CadQuery code before requesting STL', false);
     return;
@@ -281,7 +327,7 @@ async function onStlClick(e) {
 }
 
 async function onStepClick(e) {
-  const code = codeInput.value || '';
+  const code = getEditorCode() || '';
   if (!code) {
     updateOutput('Please enter CadQuery code before requesting STEP', false);
     return;
@@ -328,7 +374,6 @@ function onDomReady() {
 		btnSTEP = document.getElementById('btnSTEP');
 
 		promptInput = document.getElementById('promptInput');
-		codeInput = document.getElementById('codeInput');
 		viewer = document.getElementById('viewer');
 		setActiveTab('prompt');
 	 tabs.forEach(tab => {
@@ -340,7 +385,8 @@ function onDomReady() {
 	btnPreview.addEventListener('click', onPreviewClick);
 	btnSTL.addEventListener('click', onStlClick);
 	btnSTEP.addEventListener('click', onStepClick);
-    initViewer();
+	initCodeEditor("# CadQuery code will appear here\n");
+	initViewer();
   } catch (err) {
     console.error('Error initializing viewer on DOM ready:', err);
   }

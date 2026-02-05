@@ -24,7 +24,7 @@ body, html {
   
   flex-direction: column;
   width: 30%;
-  min-width: 300px;
+  flex: 1;
   background: #2d2d2d;
   padding: 20px;
   box-sizing: border-box;
@@ -33,12 +33,25 @@ body, html {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  transition: flex 0.25s ease;
 }
 
 .right-panel {
-  flex: 1;
+  flex: 3;
   height: 100%;
   background: #1a1a1a;
+}
+
+.code-mode .right-panel {
+  flex: 1;
+}
+ 
+.code-mode .left-panel {
+  flex: 2;
+}
+
+.hidden {
+  display: none;
 }
 
 .tabs { display: flex; border-bottom: 1px solid #ccc; }
@@ -46,7 +59,7 @@ body, html {
 .tab.active {  font-weight: bold;color: #ffffff; }
 .panel { 
 	display: none;
-	height: 200px; }
+	max-height: 500px; }
 .panel.active { display: block;flex: 1;
   margin: 20px 0; }
 
@@ -61,7 +74,14 @@ body, html {
   border-radius: 4px;
   padding: 10px;
 }
+.code-editor {
+  
+  border: 1px solid #333;
+  font-size: 13px;
+  height: 500px;
+}
 
+.code-scroller { overflow: auto; }
 
 h1 {
   margin: 0;

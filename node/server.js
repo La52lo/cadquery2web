@@ -22,7 +22,7 @@ const limiter = rate_limit({
   }
 });
 
-app.use(cors());
+//app.use(cors());
 app.use(express.json({ limit: '200kb' }));
 app.use(limiter);
 

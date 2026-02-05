@@ -6,30 +6,32 @@
   <link rel="stylesheet" href="main.css">
   <link rel="icon" type="image/png" sizes="192x192" href="favicon/favicon-192x192.png">
   <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+  <script type="module" src="/main.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="left-panel">
+  <div class="container" id="container">
+    <div class="left-panel" id="left-panel">
       <h1>Parts buddy</h1>
 
       <!-- Editor -->
       <div class="tabs">
     <div class="tab active" data-tab="prompt">Prompt</div>
     <div class="tab" data-tab="code">Code</div>
+    <div class="tab" data-tab="viewer">Viewer</div>
   </div>
 
   <div class="panel active" id="panel-prompt">
     <textarea id="promptInput" spellcheck="false" placeholder="Describe the model in words for the ai "></textarea>
   </div>
-
+ 
   <div class="panel" id="panel-code">
-    <textarea id="codeInput" spellcheck="false" placeholder="Enter CadQuery Python code here"></textarea>
+	<div id="codeEditor" class="code-editor code-scroller " placeholder="Enter CadQuery Python code here"></div>
   </div>
       
       <div class="buttons-container">
 		<button class="render-btn" id="btnPreview">Preview</button>
 		<button class="render-btn" id="btnSTL">STL</button>
-		<button class="render-btn"id="btnSTEP">STEP</button>
+		<button class="render-btn" id="btnSTEP">STEP</button>
       </div>
 
       <div class="output-container" id="output-container">
@@ -43,7 +45,7 @@
   </div>
 
 
-  <script type="module" src="main.js"></script>
+ 
 </body>
 </html>
 
