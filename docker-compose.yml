@@ -1,29 +1,22 @@
 services:
   web:
-    image: httpd:2.4
+    build: ./web
     ports:
-      - 49157:80
-    volumes:
-      - ./web:/usr/local/apache2/htdocs
-      - ./web/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - 5173:5173
+    command: npm run dev
     networks:
       - api
     container_name: cadquery2web_web
   node:
-    build: 
-      context: .
-      dockerfile: node/Dockerfile
+    build: ./node
     ports:
       - 49158:3000
-      - 5173:5173
     env_file:
       - ./node/.env
     depends_on:
       - cadquery
     volumes:
       - ./logs:/logs
-      - ./web:/app/web    # ← host ~/cadquery2web/web → container /app/web
-      - ./node:/app/node
     networks:
       - cadquery
       - api
