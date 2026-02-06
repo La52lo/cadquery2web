@@ -32,8 +32,9 @@ function initCodeEditor(initialCode = "") {
   codeEditor = new EditorView({
     doc: initialCode,
     parent,
-    extensions: [python(),basicSetup,quietlight]
+    extensions: [basicSetup,quietlight,python()]
   });
+  console.log(python());
 }
 
 function setActiveTab(name) {
@@ -151,14 +152,22 @@ function initViewer() {
     if (window.controls && window.controls.update) window.controls.update(0);
 
     // resize handler
-    window.addEventListener('resize', () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    });
+    //window.addEventListener('resize', () => {
+     // });
  
+	const resizeObserver = new ResizeObserver((container) => {
+    // Access the new dimensions
+    const { width, height } = container[0].contentRect;
+	//const w = container.clientWidth;
+     // const h = container.clientHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      console.log(`Element resized to: ${width}px x ${height}px`);
+    
+    // Add your logic here (e.g., re-render a chart or adjust UI)
+	});
+	resizeObserver.observe(container);
     // animation loop
     function animate() {
       requestAnimationFrame(animate);

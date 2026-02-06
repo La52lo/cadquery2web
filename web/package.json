@@ -18,11 +18,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
-    "@codemirror/basic-setup": "^0.20.0",
-    "@codemirror/highlight": "^0.19.8",
     "@codemirror/lang-python": "^6.2.1",
-    "@codemirror/state": "^6.5.4",
-    "@codemirror/view": "^6.39.12",
     "@uiw/codemirror-theme-quietlight": "^4.25.4",
     "codemirror": "^6.0.2"
   }

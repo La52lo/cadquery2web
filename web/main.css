@@ -84,6 +84,7 @@ body, html {
 .code-scroller { overflow: auto; }
 
 h1 {
+  flex-shrink: 0;
   margin: 0;
   font-size: 1.5rem;
   white-space: nowrap;
