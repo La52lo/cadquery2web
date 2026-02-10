@@ -19,6 +19,7 @@
   "dependencies": {
     "@babel/runtime": "^7.28.6",
     "@codemirror/lang-python": "^6.2.1",
+    "@uiw/codemirror-theme-darcula": "^4.25.4",
     "@uiw/codemirror-theme-quietlight": "^4.25.4",
     "codemirror": "^6.0.2"
   }

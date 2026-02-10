@@ -12,7 +12,7 @@ const api = window.location.origin + '/api/'; // base for endpoints; will call /
 //import { basicSetup } from "@codemirror/basic-setup";
 import { python } from "@codemirror/lang-python";
 import {EditorView, basicSetup} from "codemirror"
-import { quietlight } from "@uiw/codemirror-theme-quietlight"; // Example import
+import { darcula } from "@uiw/codemirror-theme-darcula"; // Example import
 
 
 let tabs, panels,
@@ -32,7 +32,7 @@ function initCodeEditor(initialCode = "") {
   codeEditor = new EditorView({
     doc: initialCode,
     parent,
-    extensions: [basicSetup,quietlight,python()]
+    extensions: [basicSetup,darcula,python()]
   });
   console.log(python());
 }

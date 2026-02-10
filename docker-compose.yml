@@ -3,10 +3,24 @@ services:
     build: ./web
     ports:
       - 5173:5173
+    volumes:
+      - ./web:/app/web   # 👈 THIS LINE
     command: npm run dev
     networks:
       - api
     container_name: cadquery2web_web
+  web_prod:
+      image: httpd:2.4
+      ports:
+        - 49157:80
+      volumes:
+        - ./web/dist:/usr/local/apache2/htdocs:ro
+        - ./web/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      networks:
+        - api
+      depends_on:
+        - node
+      container_name: cadquery2web_web_prod
   node:
     build: ./node
     ports:

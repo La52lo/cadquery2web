@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Parts buddy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192x192-B1Mt2Nkm.png">
+  <link rel="icon" type="image/x-icon" href="/assets/favicon-BIfaxuff.ico">
+  <script type="module" crossorigin src="/assets/index-DLowlxHX.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BfwmQoie.css">
+</head>
+<body>
+  <div class="container" id="container">
+    <div class="left-panel" id="left-panel">
+      <h1>Parts buddy</h1>
+
+      <!-- Editor -->
+      <div class="tabs">
+    <div class="tab active" data-tab="prompt">Prompt</div>
+    <div class="tab" data-tab="code">Code</div>
+    <div class="tab" data-tab="viewer">Viewer</div>
+  </div>
+
+  <div class="panel active" id="panel-prompt">
+    <textarea id="promptInput" spellcheck="false" placeholder="Describe the model in words for the ai "></textarea>
+  </div>
+ 
+  <div class="panel" id="panel-code">
+	<div id="codeEditor" class="code-editor code-scroller " placeholder="Enter CadQuery Python code here"></div>
+  </div>
+      
+      <div class="buttons-container">
+		<button class="render-btn" id="btnPreview">Preview</button>
+		<button class="render-btn" id="btnSTL">STL</button>
+		<button class="render-btn" id="btnSTEP">STEP</button>
+      </div>
+
+      <div class="output-container" id="output-container">
+        <!-- output / messages go here -->
+      </div>
+    </div>
+
+    <div class="right-panel" id="viewer">
+      <!-- three.js viewer (unchanged) -->
+    </div>
+  </div>
+
+
+ 
+</body>
+</html>
+

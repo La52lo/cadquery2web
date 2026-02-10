@@ -98,6 +98,11 @@ POLYLINE RULES (critical):
 - Never extrude a polyline unless .close() is called beforehand
 - Never extrude a polyline if the polyline points are collinear
 
+CadQuery Default Centering & Coordinate Guidelines:
+- cq.Workplane().box() and cq.Workplane().sphere(): Centered on all three axes (X,Y,Z) by default. A box of height H spans from (-H/2) to (+H/2). To start at (Z=0), use centered=(True, True, False).
+- Radial Primitives (cylinder, cone): Centered on (X) and (Y), but not (Z). They grow from (Z=0) upwards.
+- 2D Shapes (rect, circle): Centered on the Workplane origin (0,0).
+
 REASONING REQUIREMENTS:
 - Declare all parameters at the top.
 - Explicitly state the coordinate system (origin, axes, Z direction).
