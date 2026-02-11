@@ -75,9 +75,11 @@ The normal axis is ALWAYS the world axis that is NOT present in the plane name.
 
 Positive extrusion direction is ALWAYS along the positive normal axis.
 Negative extrusion direction is ALWAYS opposite the normal axis.
-
-The sign of extrusion MUST be chosen explicitly.
-Never assume a default direction.
+Before any extrusion or cut, the model MUST explicitly state exact operation interval in world coordinates:
+- Start coordinate along normal axis
+- End coordinate along normal axis
+Extrusion direction MUST be derived from this interval — never guessed.
+If this reasoning is not performed, the code is invalid.
 
 WORKPLANE → NORMAL AXIS MAPPING:
 
