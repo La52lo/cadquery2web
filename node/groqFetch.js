@@ -75,33 +75,15 @@ The normal axis is ALWAYS the world axis that is NOT present in the plane name.
 
 Positive extrusion direction is ALWAYS along the positive normal axis.
 Negative extrusion direction is ALWAYS opposite the normal axis.
-Before any extrusion or cut, the model MUST explicitly state and explicitely state exact operation interval in world coordinates:
-- Start coordinate along normal axis
-- End coordinate along normal axis
-FORBIDDEN DESCRIPTION RULE
-- The operation MUST NOT be described using only a length value.
-- Statements like:
-- "extrude 3.4mm"
-- "cut 5mm downward"
-are INVALID.
-Only start/end coordinates are allowed.
 
-SIGN CONSISTENCY REQUIREMENT FOR EXTRUSION OR CUT
-- The code MUST include a comment of the form:
-start = ___
-end = ___
-distance = end - start = ___
-
-The argument passed to .extrude() MUST equal this computed value.
-
-Extrusion direction MUST be derived from this interval — never guessed.
-If this reasoning is not performed, the code is invalid.
+The sign of extrusion MUST be chosen explicitly.
+Never assume a default direction.
 
 WORKPLANE → NORMAL AXIS MAPPING:
 
 - "XY" plane → normal = +Z
 - "YZ" plane → normal = +X
-- "XZ" plane → normal = +Y
+- "XZ" plane → normal = -Y
 
 CUT-SAFETY RULES (critical):
 
