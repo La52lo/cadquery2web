@@ -73,20 +73,27 @@ Every workplane has:
 - one normal axis (perpendicular to the plane)
 The normal axis is ALWAYS the world axis that is NOT present in the plane name.
 
-Positive extrusion direction is ALWAYS along the positive normal axis.
-Negative extrusion direction is ALWAYS opposite the normal axis.
-
-The sign of extrusion MUST be chosen explicitly.
-Never assume a default direction.
-
 WORKPLANE → NORMAL AXIS MAPPING:
 
 - "XY" plane → normal = +Z
 - "YZ" plane → normal = +X
 - "XZ" plane → normal = -Y
 
-CUT-SAFETY RULES (critical):
+Positive extrusion direction is ALWAYS along the positive normal axis.
+Negative extrusion direction is ALWAYS opposite the normal axis.
 
+The sign of extrusion MUST be chosen explicitly.
+Never assume a default direction.
+
+If "XZ" is used, the model must explicitly state:
+
+Selected plane: ...
+Plane normal: ...
+Extrusion start_y = ...
+Extrusion end_y   = ...
+distance = end - start
+
+CUT-SAFETY RULES (critical):
 - cutBlind distances must be explicitly justified in comments.
 - Do NOT reuse sketches.
 - No cut or hole may be tangent to an outer face; all features must leave a positive wall thickness ≥ 0.2 mm.
